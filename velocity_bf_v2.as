@@ -78,6 +78,13 @@ void RenderEvalSettings()
     UI::InputFloatVar("", "bf_condition_speed", 10);
     UI::Text("Min cp:");
     UI::InputIntVar("Min CP collected", "velocity_jsap_min_cp", 1);
+    UI::InputIntVar("Trigger index (0 to disable)", "jsap_trigger_index", 1);
+    Trigger3D trigger = GetTriggerVar();
+    if (trigger.Size.x != -1) {
+        vec3 pos2 = trigger.Position + trigger.Size;
+        UI::TextDimmed("The car must be in the trigger of coordinates: ");
+        UI::TextDimmed("" + trigger.Position.ToString() + " " + pos2.ToString());
+    }
 
 }
 
@@ -157,6 +164,10 @@ bool is_better(SimulationManager@ sim_manager) {
         return false;
     }
 
+    if (GetD("jsap_trigger_index") > 0 && !IsInTrigger(pos)) {
+        return false;
+    }
+
     for (int l = 0; l < 3; l++){
         if (axis_settings[l] == "bf for 0") {
             current[l] = Math::Abs(state_velocity[l]) < 1000/3.6 ? -Math::Abs(state_velocity[l]) : -1000/3.6;
@@ -181,6 +192,7 @@ void Main() {
     RegisterVariable("velocity_jsap_axis_y", "lower");
     RegisterVariable("velocity_jsap_axis_z", "don't bf");
     RegisterVariable("velocity_jsap_min_cp", 0);
+    RegisterVariable("jsap_trigger_index", 0);
     RegisterBruteforceEvaluation("Velocity", "Velocity", OnEvaluate, RenderEvalSettings);
 }
 
@@ -194,6 +206,16 @@ float Norm(vec3& vec) {
 
 double GetD(string& str) {
     return GetVariableDouble(str);
+}
+
+Trigger3D GetTriggerVar() {
+    uint triggerIndex = int(GetD("jsap_trigger_index"));
+    return GetTriggerByIndex(triggerIndex-1);
+}
+
+bool IsInTrigger(vec3& pos) {
+    auto trigger = GetTriggerVar();
+    return trigger.ContainsPoint(pos);
 }
 
 void OnSimulationBegin(SimulationManager@ simManager)
