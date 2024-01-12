@@ -15,7 +15,6 @@ void RenderEvalSettings()
     GetVariable("multi_point_max_eval", eval_max);
     GetVariable("multi_point_points", raw_points);
     GetVariable("multi_point_num", num_points);
-    GetRawPoints();
 
     UI::Dummy(vec2(0, 5));
     UI::InputTimeVar("Eval min", "multi_point_min_eval");
@@ -48,13 +47,13 @@ void RenderEvalSettings()
 
     if (UI::Button("Add point")) {
         SetVariable("multi_point_num", ++num_points);
-        RegisterVariable("multi_point_" + Text::FormatInt(num_points - 1), "0 0 0");
+        RegisterVariable("multi_point_" + Text::FormatInt(int(num_points) - 1), "0 0 0");
         SetVariable("multi_point_" + Text::FormatFloat(num_points - 1), "0 0 0");
     }
 
     UI::SameLine();
     if (UI::Button("Remove all")) {
-        int temp = num_points;
+        int temp = int(num_points);
         for (int teh = 0; teh < temp; teh++) {
             SetVariable("multi_point_" + Text::FormatInt(teh), "");
             GetRawPoints();
@@ -129,13 +128,18 @@ bool is_better(SimulationManager@ sim_manager) {
         }
     }
 
-    return time == -1 or SumArrayElements(current) < SumArrayElements(best);
+    //if (sim_manager.PlayerInfo.CurCheckpointCount < 1) {
+    //    return false;
+    //}
+
+    return (time == -1 or SumArrayElements(current) < SumArrayElements(best));
 }
 
 void GetRawPoints() {
     string raw_points;
     for (int l = 0; l < num_points; l++) {
-        if (GetVariableString("multi_point_" + Text::FormatInt(l)) != "") {
+        RegisterVariable("multi_point_" + Text::FormatInt(l), "0.000 0.000 0.000");
+        if (GetVariableString("multi_point_" + Text::FormatInt(l)) != "0.000 0.000 0.000") {
             raw_points += GetVariableString("multi_point_" + Text::FormatInt(l)) + " ";
         }
     }
@@ -144,6 +148,10 @@ void GetRawPoints() {
 
 bool GetB(string& str) {
     return GetVariableBool(str);
+}
+
+string GetS(string& str) {
+    return GetVariableString(str);
 }
 
 void SetEachPoint() {
@@ -189,7 +197,7 @@ void ReInitCurrent() {
 
 void AddCarPos(int fromTime, int toTime, const string&in commandLine, const array<string>&in args) {
     SetVariable("multi_point_num", ++num_points);
-    RegisterVariable("multi_point_" + Text::FormatInt(num_points - 1), "0 0 0");
+    RegisterVariable("multi_point_" + Text::FormatInt(int(num_points) - 1), "0 0 0");
     SetVariable("multi_point_" + Text::FormatFloat(num_points - 1), carpos.ToString());
 }
 
@@ -199,6 +207,10 @@ void Main() {
     RegisterVariable("multi_point_max_eval", 10000);
     RegisterVariable("multi_point_points", "0 0 0 1 1 1 2 2 2");
     RegisterVariable("multi_point_num", 2);
+    array<string> points = GetVariableString("multi_point_points").Split(" ");
+    num_points = (points.Length - 1) / 3;
+    SetVariable("multi_point_num", num_points);
+    GetRawPoints();
     RegisterVariable("multi_point_verbose", false);
     RegisterBruteforceEvaluation("Multi point", "Multi point", OnEvaluate, RenderEvalSettings);
 }

@@ -1,13 +1,15 @@
 // Documentation available at https://donadigo.com/tminterface/plugins/api
 
-int eval_min;
-int eval_max;
+float eval_min;
+float eval_max;
 string point_raw;
 vec3 any_point;
 array<float> p_points = {0,0,0};
 
 void RenderEvalSettings()
 {
+    GetVariable("any_wheel_point_point", point_raw);
+
     UI::Dummy(vec2(0, 5));
     UI::InputTimeVar("Eval min", "any_wheel_point_min_eval");
     UI::InputTimeVar("Eval max", "any_wheel_point_max_eval");
@@ -82,7 +84,7 @@ bool is_better(SimulationManager@ sim_manager) {
     auto savedState = sim_manager.SaveState();
     auto wheels = savedState.Wheels;
 
-    current = 999999999;
+    current = 20000000000;
 
     float yaw, pitch, roll;
     state.Location.Rotation.GetYawPitchRoll(yaw, pitch, roll);

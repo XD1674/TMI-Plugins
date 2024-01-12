@@ -1,10 +1,7 @@
 // Documentation available at https://donadigo.com/tminterface/plugins/api
 
-int eval_min;
-int eval_max;
-float z_min;
-float z_max;
-int past_time;
+float eval_min;
+float eval_max;
 string mode;
 
 array<string> bf_modes = {"lower", "higher"};
