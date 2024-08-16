@@ -20,14 +20,11 @@ void RenderEvalSettings()
     UI::Text("X coordinate increases when you go towards blue sign");
     UI::Text("Y coordinate increases when going up");
     UI::Text("Z increases when you look towards blue sign and go right");
-    UI::Text("The Bruteforce window will show a value of 0 for velocities you don't want to bruteforce");
 
     UI::Dummy(vec2(0, 5));
-    
-    UI::Text("X Velocity: ");
     //UI:SameLine();
 
-    if (UI::BeginCombo("axis_x", axis_settings[0])) {
+    if (UI::BeginCombo("X Velocity", axis_settings[0])) {
         for (uint i = 0; i < modes.get_Length(); i++)
         {
             string currentMode = modes[i];
@@ -41,9 +38,7 @@ void RenderEvalSettings()
         UI::EndCombo();
     }
 
-    UI::Text("Y Velocity: ");
-
-    if (UI::BeginCombo("axis_y", axis_settings[1])) {
+    if (UI::BeginCombo("Y Velocity", axis_settings[1])) {
         for (uint i = 0; i < modes.get_Length(); i++)
         {
             string currentMode = modes[i];
@@ -57,9 +52,7 @@ void RenderEvalSettings()
         UI::EndCombo();
     }
 
-    UI::Text("Z Velocity: ");
-
-    if (UI::BeginCombo("axis_z", axis_settings[2])) {
+    if (UI::BeginCombo("Z Velocity", axis_settings[2])) {
         for (uint i = 0; i < modes.get_Length(); i++)
         {
             string currentMode = modes[i];
@@ -74,9 +67,7 @@ void RenderEvalSettings()
     }
 
     UI::Dummy(vec2(0, 5));
-    UI::Text("Min speed:");
-    UI::InputFloatVar("", "bf_condition_speed", 10);
-    UI::Text("Min cp:");
+    UI::InputFloatVar("Min speed", "bf_condition_speed", 10);
     UI::InputIntVar("Min CP collected", "velocity_jsap_min_cp", 1);
     UI::InputIntVar("Trigger index (0 to disable)", "jsap_trigger_index", 1);
     Trigger3D trigger = GetTriggerVar();
@@ -102,7 +93,7 @@ BFEvaluationResponse@ OnEvaluate(SimulationManager@ simManager, const BFEvaluati
             time = raceTime;
         }
         if (raceTime == eval_max) { 
-            print("base at " + time);
+            print("base at " + time + " Iteration:" + info.Iterations);
             if (axis_settings[0] != "don't bf") {
                 if (axis_settings[0] == "bf for 0"){
                     print("X Velocity: " + Text::FormatFloat(best[0]*3.6*axis_settings_numerical[0], "", 0, 15) + "    bf-ing for 0  (negative sign might be incorrect here)");

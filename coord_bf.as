@@ -20,14 +20,11 @@ void RenderEvalSettings()
     UI::Text("X coordinate increases when you go towards blue sign");
     UI::Text("Y coordinate increases when going up");
     UI::Text("Z increases when you look towards blue sign and go right");
-    UI::Text("The Bruteforce window will show a value of 0 for coordinates you don't want to bruteforce");
 
     UI::Dummy(vec2(0, 5));
-    
-    UI::Text("X coord: ");
     //UI:SameLine();
 
-    if (UI::BeginCombo("axis_x", axis_settings[0])) {
+    if (UI::BeginCombo("X coord", axis_settings[0])) {
         for (uint i = 0; i < modes.get_Length(); i++)
         {
             string currentMode = modes[i];
@@ -41,9 +38,7 @@ void RenderEvalSettings()
         UI::EndCombo();
     }
 
-    UI::Text("Y coord: ");
-
-    if (UI::BeginCombo("axis_y", axis_settings[1])) {
+    if (UI::BeginCombo("Y coord", axis_settings[1])) {
         for (uint i = 0; i < modes.get_Length(); i++)
         {
             string currentMode = modes[i];
@@ -57,9 +52,7 @@ void RenderEvalSettings()
         UI::EndCombo();
     }
 
-    UI::Text("Z coord: ");
-
-    if (UI::BeginCombo("axis_z", axis_settings[2])) {
+    if (UI::BeginCombo("Z coord", axis_settings[2])) {
         for (uint i = 0; i < modes.get_Length(); i++)
         {
             string currentMode = modes[i];
@@ -74,9 +67,7 @@ void RenderEvalSettings()
     }
 
     UI::Dummy(vec2(0, 5));
-    UI::Text("Min speed:");
-    UI::InputFloatVar("", "bf_condition_speed", 10);
-    UI::Text("Min cp:");
+    UI::InputFloatVar("Min speed", "bf_condition_speed", 10);
     UI::InputIntVar("Min CP collected", "coord_jsap_min_cp", 1);
     UI::InputIntVar("Trigger index (0 to disable)", "jsap_trigger_index", 1);
     Trigger3D trigger = GetTriggerVar();
@@ -104,15 +95,15 @@ BFEvaluationResponse@ OnEvaluate(SimulationManager@ simManager, const BFEvaluati
         if (raceTime == eval_max) { 
             print("base at " + time);
             if (axis_settings[0] != "don't bf") {
-                print("X coord: " + Text::FormatFloat(best[0]*3.6*axis_settings_numerical[0], "", 0, 15) + "    bf-ing for " + axis_settings[0]);
+                print("X coord: " + Text::FormatFloat(best[0]*axis_settings_numerical[0], "", 0, 15) + "    bf-ing for " + axis_settings[0]);
             }
             if (axis_settings[1] != "don't bf") {
-                print("Y coord: " + Text::FormatFloat(best[1]*3.6*axis_settings_numerical[1], "", 0, 15) + "    bf-ing for " + axis_settings[1]);
+                print("Y coord: " + Text::FormatFloat(best[1]*axis_settings_numerical[1], "", 0, 15) + "    bf-ing for " + axis_settings[1]);
             }
             if (axis_settings[2] != "don't bf") {
-                print("Z coord: " + Text::FormatFloat(best[2]*3.6*axis_settings_numerical[2], "", 0, 15) + "    bf-ing for " + axis_settings[2]);
+                print("Z coord: " + Text::FormatFloat(best[2]*axis_settings_numerical[2], "", 0, 15) + "    bf-ing for " + axis_settings[2]);
             }
-            print(Text::FormatFloat(SumArrayElements(best)*3.6, "", 0, 15));
+            print(Text::FormatFloat(SumArrayElements(best), "", 0, 15));
         }
     } else if (info.Phase == BFPhase::Search) { 
         if (eval_min <= raceTime and raceTime <= eval_max and is_better(simManager)) { 

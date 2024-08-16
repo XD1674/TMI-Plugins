@@ -31,7 +31,7 @@ void RenderEvalSettings()
     UI::Dummy(vec2(0, 5));
     GetVariable("wheel_height_wheel_type", wheel_type);
     GetVariable("wheel_height_mode", mode);
-    if (UI::BeginCombo("mode", wheel_type)) {
+    if (UI::BeginCombo("Wheel", wheel_type)) {
         for (uint i = 0; i < modes.Length; i++)
         {
             string currentMode = modes[i];
@@ -43,12 +43,9 @@ void RenderEvalSettings()
         }
                 
         UI::EndCombo();
+    }
 
-        }
-    
-    UI::Dummy(vec2(0, 5));
-
-    if (UI::BeginCombo("bf_mode", mode)) {
+    if (UI::BeginCombo("Mode", mode)) {
         for (uint i = 0; i < bf_modes.Length; i++)
         {
             string currentMode = bf_modes[i];
@@ -60,15 +57,11 @@ void RenderEvalSettings()
         }
                 
         UI::EndCombo();
-
-        }
+    }
 
     UI::Dummy(vec2(0, 5));
-    UI::Text("Min speed:");
-    UI::InputFloatVar("", "bf_condition_speed", 10);
-    UI::Text("Min cp:");
+    UI::InputFloatVar("Min speed", "bf_condition_speed", 10);
     UI::InputIntVar("Min CP collected", "wheel_height_min_cp", 1);
-    UI::Dummy(vec2(0, 5));
     UI::InputIntVar("Trigger index (0 to disable)", "wheel_height_trigger_index", 1);
     Trigger3D trigger = GetTriggerVar();
     if (trigger.Size.x != -1) {

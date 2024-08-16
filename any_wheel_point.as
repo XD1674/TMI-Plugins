@@ -26,9 +26,7 @@ void RenderEvalSettings()
     }
     
     UI::Dummy(vec2(0, 5));
-    UI::Text("Min speed:");
-    UI::InputFloatVar("", "bf_condition_speed", 10);
-    UI::Text("Min cp:");
+    UI::InputFloatVar("Min speed", "bf_condition_speed", 10);
     UI::InputIntVar("Min CP collected", "any_wheel_min_cp", 1);
 
 }
@@ -68,6 +66,11 @@ bool is_better(SimulationManager@ sim_manager) {
 
     auto state = sim_manager.Dyna.CurrentState;
     auto pos = state.Location.Position;
+    auto rot = state.Location.Rotation;
+    auto wheels = sim_manager.Wheels;
+
+    float yaw, pitch, roll;
+    state.Location.Rotation.GetYawPitchRoll(yaw, pitch, roll);
 
     float kmhspeed;
     GetVariable("bf_condition_speed", kmhspeed);
@@ -81,49 +84,32 @@ bool is_better(SimulationManager@ sim_manager) {
         return false;
     }
 
-    auto savedState = sim_manager.SaveState();
-    auto wheels = savedState.Wheels;
+    current = 20000000;
 
-    current = 20000000000;
-
-    float yaw, pitch, roll;
-    state.Location.Rotation.GetYawPitchRoll(yaw, pitch, roll);
-
-    float wheel_x;
-    float wheel_y;
-    float wheel_z;
+    vec3 wheel_pos;
 
     for (int i = 0; i < 4; i++) {
         switch(i)
         {
             case 0:
-                wheel_x = rotate(roll, yaw, pitch, wheels.BackRight.OffsetFromVehicle)[0] + pos[0];
-                wheel_y = rotate(roll, yaw, pitch, wheels.BackRight.OffsetFromVehicle)[1] + pos[1];
-                wheel_z = rotate(roll, yaw, pitch, wheels.BackRight.OffsetFromVehicle)[2] + pos[2];
+                wheel_pos = mat_mul_vec(rot, wheels.BackRight.OffsetFromVehicle) + pos;
                 break;
             
             case 1:
-                wheel_x = rotate(roll, yaw, pitch, wheels.BackLeft.OffsetFromVehicle)[0] + pos[0];
-                wheel_y = rotate(roll, yaw, pitch, wheels.BackLeft.OffsetFromVehicle)[1] + pos[1];
-                wheel_z = rotate(roll, yaw, pitch, wheels.BackLeft.OffsetFromVehicle)[2] + pos[2];
+                wheel_pos = mat_mul_vec(rot, wheels.BackLeft.OffsetFromVehicle) + pos;
                 break;
             
             case 2:
-                wheel_x = rotate(roll, yaw, pitch, wheels.FrontRight.OffsetFromVehicle)[0] + pos[0];
-                wheel_y = rotate(roll, yaw, pitch, wheels.FrontRight.OffsetFromVehicle)[1] + pos[1];
-                wheel_z = rotate(roll, yaw, pitch, wheels.FrontRight.OffsetFromVehicle)[2] + pos[2];
+                wheel_pos = mat_mul_vec(rot, wheels.FrontRight.OffsetFromVehicle) + pos;
                 break;
             
             case 3:
-                wheel_x = rotate(roll, yaw, pitch, wheels.FrontLeft.OffsetFromVehicle)[0] + pos[0];
-                wheel_y = rotate(roll, yaw, pitch, wheels.FrontLeft.OffsetFromVehicle)[1] + pos[1];
-                wheel_z = rotate(roll, yaw, pitch, wheels.FrontLeft.OffsetFromVehicle)[2] + pos[2];
+                wheel_pos = mat_mul_vec(rot, wheels.FrontLeft.OffsetFromVehicle) + pos;
                 break;
         
         }
-        vec3 wheel_pos = vec3(wheel_x, wheel_y, wheel_z);
 
-        float dist = Math::Distance(wheel_pos, any_point);
+        float dist = Math::Distance(wheel_pos, any_point); // + (Math::Max(45, 180 - Math::Abs(pitch)) - 45) / 45;
 
         if (dist < current){
             current = dist;
@@ -131,6 +117,27 @@ bool is_better(SimulationManager@ sim_manager) {
     }
 
     return best == -1 or current < best;
+}
+
+vec3 mat_mul_vec(const mat3&in m, const vec3&in v) {
+    return vec3(Math::Dot(m.x, v), Math::Dot(m.y, v), Math::Dot(m.z, v));
+}
+
+vec3 rotate(const quat&in rot_quat, const vec3&in vec_inp) {
+    vec3 vec_inp_norm = vec_inp.Normalized();
+    quat quat_vec = quat(vec_inp_norm.x, vec_inp_norm.y, vec_inp_norm.z, 0);
+    quat quat_conj = quat(-rot_quat.x, -rot_quat.y, -rot_quat.z, rot_quat.w);
+
+    quat quat_multiplied = quat_mul(quat_mul(rot_quat, quat_vec), quat_conj);
+
+    return vec3(quat_multiplied.x, quat_multiplied.y, quat_multiplied.z) * vec_inp.Length();
+}
+
+quat quat_mul(const quat&in quat1, const quat&in quat2) {
+    return quat(quat1.w * quat2.x + quat1.x * quat2.w + quat1.y * quat2.z - quat1.z * quat2.y,
+                quat1.w * quat2.y - quat1.x * quat2.z + quat1.y * quat2.w + quat1.z * quat2.x,
+                quat1.w * quat2.z + quat1.x * quat2.y - quat1.y * quat2.x + quat1.z * quat2.w,
+                quat1.w * quat2.w - quat1.x * quat2.x - quat1.y * quat2.y - quat1.z * quat2.z);
 }
 
 void Main() {
@@ -157,40 +164,6 @@ float Norm(vec3& vec) {
 
 double GetD(string& str) {
     return GetVariableDouble(str);
-}
-
-vec3 rotate(float yaw, float pitch, float roll, vec3 points) {
-
-    float cosa = Math::Cos(yaw);
-    float sina = Math::Sin(yaw);
-
-    float cosb = Math::Cos(pitch);
-    float sinb = Math::Sin(pitch);
-
-    float cosc = Math::Cos(roll);
-    float sinc = Math::Sin(roll);
-
-    float Axx = cosa*cosb;
-    float Axy = cosa*sinb*sinc - sina*cosc;
-    float Axz = cosa*sinb*cosc + sina*sinc;
-
-    float Ayx = sina*cosb;
-    float Ayy = sina*sinb*sinc + cosa*cosc;
-    float Ayz = sina*sinb*cosc - cosa*sinc;
-
-    float Azx = -sinb;
-    float Azy = cosb*sinc;
-    float Azz = cosb*cosc;
-
-    float px = points[0];
-    float py = points[1];
-    float pz = points[2];
-
-    points[0] = Axx*px + Axy*py + Axz*pz;
-    points[1] = Ayx*px + Ayy*py + Ayz*pz;
-    points[2] = Azx*px + Azy*py + Azz*pz;
-
-    return points;
 }
 
 void OnRunStep(SimulationManager@ simManager)
