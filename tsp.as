@@ -143,6 +143,7 @@ void Render() {
         UI::Text("Elimination table");
         UI::TextDimmed("Put pairs of point names here you dont want the tsp solver to connect in the specific direction");
         UI::TextDimmed("For example: 'cp1 cp2' means you cant go from cp1 to cp2, or its not worth it (you can still go from cp2 to cp1)");
+        UI::TextDimmed("'cp1 cp2 cp3' is the same as: 'cp1 cp2' + 'cp1 cp3");
         UI::TextDimmed("List these pairs with in each line, the points should be separated by 1 space");
         UI::InputTextMultiline("##", elimTable);
         UI::Separator();
@@ -161,16 +162,19 @@ void Render() {
                 if (elimRow.Length == 1) {
                     continue;
                 }
-                if (elimRow.Length > 2) {
-                    log("Use _ instead of space when renaming points in TSP solver", Severity::Error);
-                }
                 int elimFrom = IndexFromPointName(elimRow[0]);
-                int elimTo = IndexFromPointName(elimRow[1]);
-                if (elimFrom == -1 || elimTo == -1) {
+                if (elimFrom == -1) {
                     log("One of the points aren't found", Severity::Error);
                     continue;
                 }
-                costMat[elimTo][elimFrom] = 0;
+                for (int j = 1; j < elimRow.Length; j++) {
+                    int elimTo = IndexFromPointName(elimRow[j]);
+                    if (elimTo == -1) {
+                        log("One of the points aren't found", Severity::Error);
+                        continue;
+                    }
+                    costMat[elimTo][elimFrom] = 0;
+                }
             }
             for (int i = 0; i < num_points; i++) {
                 inter.Add(1);
