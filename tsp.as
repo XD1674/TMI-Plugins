@@ -9,19 +9,87 @@ PluginInfo@ GetPluginInfo()
 }
 
 void Main() {
+    RegisterCustomCommand("add_point", "Adds a point from cam pos to tsp solver point list", AddPoint);
+    RegisterCustomCommand("add_points_from_replay", "Adds the start, all the cp and fin points from a replay to tsp solver point list", GetFromReplay);
     RegisterVariable("jsap_tsp_closed", true);
     RegisterVariable("jsap_tsp_num_points", 0);
     RegisterVariable("jsap_tsp_results", "");
     RegisterVariable("jsap_tsp_it_count", 100);
     RegisterVariable("jsap_tsp_elim", "");
+    RegisterVariable("jsap_tsp_best", 9999999);
+    RegisterVariable("jsap_tsp_best_points", "");
+    GetVariable("jsap_tsp_best", bestRun);
+    GetVariable("jsap_tsp_best_points", bestRunPoints);
     GetVariable("jsap_tsp_results", results);
     GetVariable("jsap_tsp_num_points", num_points);
     GetVariable("jsap_tsp_elim", elimTable);
+    for (int i = 0; i < num_points; i++) {
+        RegisterVariable("jsap_tsp_point" + Text::FormatInt(i), "0 0 0");
+        RegisterVariable("jsap_tsp_point_name" + Text::FormatInt(i), "");
+    }
 }
 
+void AddPoint(int fromTime, int toTime, const string&in commandLine, const array<string>&in args) {
+    auto cam = GetCurrentCamera();
+    if (@cam != null) {
+        RegisterVariable("jsap_tsp_point" + Text::FormatInt(num_points + 1), "0 0 0");
+        RegisterVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "");
+        SetVariable("jsap_tsp_point" + Text::FormatInt(num_points + 1), cam.Location.Position.ToString());
+        SetVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "cp" + Text::FormatInt(num_points + 1));
+        SetVariable("jsap_tsp_num_points", ++num_points);
+    }
+}
+
+void GetFromReplay(int fromTime, int toTime, const string&in commandLine, const array<string>&in args) {
+    SetVariable("jsap_tsp_num_points", 0);
+    num_points = 0;
+    for (int i = 0; i < cpList.Length; i++) {
+        RegisterVariable("jsap_tsp_point" + Text::FormatInt(num_points + 1), "0 0 0");
+        RegisterVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "");
+        string inter;
+        for (int j = 0; j < 3; j++) {
+            if (j != 0)
+                inter += " ";
+            inter += Text::FormatFloat(cpList[i][j], "", 0, 3);
+        }
+        SetVariable("jsap_tsp_point" + Text::FormatInt(num_points + 1), inter);
+        if (i == 0) {
+            SetVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "start");
+        }
+        else if (i == cpList.Length - 1) {
+            SetVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "fin");
+        }
+        else {
+            SetVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "cp" + Text::FormatInt(num_points));
+        }
+        SetVariable("jsap_tsp_num_points", ++num_points);
+    }
+}
+
+void OnSimulationBegin(SimulationManager@ simManager) {
+    isInSim = true;
+    cpList.Clear();
+    cpList.Add(simManager.Dyna.CurrentState.Location.Position);
+}
+
+void OnCheckpointCountChanged(SimulationManager@ simManager, int current, int target) {
+    if (isInSim)
+        cpList.Add(simManager.Dyna.CurrentState.Location.Position);
+    if (simManager.PlayerInfo.RaceFinished)
+        isInSim = false;
+}
+
+void OnLapCountChanged(SimulationManager@ simManager, int current, int target) {
+    isInSim = false;
+}
+
+
+bool isInSim = false;
+array<vec3> cpList;
+
 int num_points;
-float bestRun = 99999999999;
-string bestRunPoints = "";
+float bestRun;
+string bestRunPoints;
 string results;
 string elimTable;
 array<array<float>> costMat;
@@ -36,8 +104,8 @@ void Render() {
             for (int i = 1; i < num_points + 1; i++) {
                 RegisterVariable("jsap_tsp_point" + Text::FormatInt(i), "0 0 0");
                 RegisterVariable("jsap_tsp_point_name" + Text::FormatInt(i), "");
-                UI::InputTextVar("##" + Text::FormatInt(i), "jsap_tsp_point_name" + Text::FormatInt(i)); //thank you aijundi you're a genius
-                UI::DragFloat3Var("##" + Text::FormatInt(i), "jsap_tsp_point" + Text::FormatInt(i));
+                UI::InputTextVar(" ##" + Text::FormatInt(i), "jsap_tsp_point_name" + Text::FormatInt(i)); //thank you aijundi you're a genius
+                UI::DragFloat3Var("  ##" + Text::FormatInt(i), "jsap_tsp_point" + Text::FormatInt(i));
                 UI::SameLine();
                 if (UI::Button("Cam copy##" + Text::FormatInt(i))) {
                     auto cam = GetCurrentCamera();
@@ -62,7 +130,7 @@ void Render() {
                     RegisterVariable("jsap_tsp_point" + Text::FormatInt(num_points + 1), "0 0 0");
                     RegisterVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "");
                     SetVariable("jsap_tsp_point" + Text::FormatInt(num_points + 1), cam.Location.Position.ToString());
-                    SetVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "Point_" + Text::FormatInt(num_points + 1));
+                    SetVariable("jsap_tsp_point_name" + Text::FormatInt(num_points + 1), "cp" + Text::FormatInt(num_points + 1));
                     SetVariable("jsap_tsp_num_points", ++num_points);
                 }
             }
@@ -82,13 +150,13 @@ void Render() {
             int n;
             GetVariable("jsap_tsp_it_count", n);
             costMat = ConstructCostMat();
-            float best = 99999999999;
+            float best = 9999999;
             array<int> bestSteps;
             array<array<float>> pher;
             array<float> inter;
             SetVariable("jsap_tsp_elim", elimTable);
             array<string> splitElimTable = elimTable.Split("\n");
-            for (int i = 0; i < splitElimTable.Length; i++) {
+            for (int i = 0; i < int(splitElimTable.Length); i++) {
                 array<string> elimRow = splitElimTable[i].Split(" ");
                 if (elimRow.Length == 1) {
                     continue;
@@ -157,7 +225,7 @@ void Render() {
                         best = cost;
                         bestSteps = steps;
                         //log(Text::FormatFloat(best, "", 0, 2));
-                        for (int yey = 0; yey < steps.Length; yey++) {
+                        for (int yey = 0; yey < int(steps.Length); yey++) {
                             //log(Text::FormatInt(steps[yey]));
                         }
                     }
@@ -168,25 +236,27 @@ void Render() {
                 pher = pherCopy;
             }
             string results_points;
-            for (int i = 0; i < bestSteps.Length; i++) {
+            for (int i = 0; i < int(bestSteps.Length); i++) {
                 results_points += " " + GetVariableI("jsap_tsp_point_name" + Text::FormatInt(bestSteps[i]));
             }
             if (best < bestRun) {
                 bestRun = best;
                 bestRunPoints = results_points;
+                SetVariable("jsap_tsp_best", bestRun);
+                SetVariable("jsap_tsp_best_points", bestRunPoints);
             }
             results += Text::FormatFloat(best, "", 0, 2) + ":" + results_points + "\n";
             SetVariable("jsap_tsp_results", results);
         }
         UI::TextDimmed("It's recommended to rerun it a few times");
 
-        UI::Text(results);
+        UI::TextWrapped(results);
         UI::Dummy(vec2(0, 5));
         UI::Text("Best:");
-        UI::Text(Text::FormatFloat(bestRun, "", 0, 2) + ":" + bestRunPoints);
+        UI::TextWrapped(Text::FormatFloat(bestRun, "", 0, 2) + ":" + bestRunPoints);
         if(UI::Button("Clear records")) {
             results = "";
-            bestRun = 99999999999;
+            bestRun = 9999999;
             bestRunPoints = "";
             SetVariable("jsap_tsp_results", results);
         }
@@ -217,7 +287,7 @@ int RandIndexDistribution(array<float> inp) {
     float rand = Math::Rand(0.0, 1.0);
     array<float> inter = inp;
     inter.SortDesc();
-    float sum;
+    float sum = 0;
     for (int i = 0; i < num_points; i++) {
         sum += inter[i];
         if (sum > rand) {
@@ -257,8 +327,8 @@ array<array<float>> ConstructCostMat() {
 
 array<array<float>> MatMulScal(const array<array<float>>&in inp, const float&in scalar) {
     array<array<float>> res = inp;
-    for (int i = 0; i < inp.Length; i++) {
-        for (int j = 0; j < inp[0].Length; j++) {
+    for (int i = 0; i < int(inp.Length); i++) {
+        for (int j = 0; j < int(inp[0].Length); j++) {
             res[i][j] *= scalar;
         }
     }
@@ -267,7 +337,7 @@ array<array<float>> MatMulScal(const array<array<float>>&in inp, const float&in 
 
 array<float> DivArray(const array<float>&in inp, const float&in div) {
     array<float> res;
-    for (int i = 0; i < inp.Length; i++) {
+    for (int i = 0; i < int(inp.Length); i++) {
         res.Add(inp[i] / div);
     }
     return res;
